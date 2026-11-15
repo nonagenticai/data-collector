@@ -1,0 +1,40 @@
+services:
+  data-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: data-collector
+    environment:
+      DATA_COLLECTOR_SERVICE_NAME: data-collector
+      DATA_COLLECTOR_PORT: "8151"
+      DATA_COLLECTOR_ENVIRONMENT: development
+      DATA_COLLECTOR_LOG_LEVEL: INFO
+      DATA_COLLECTOR_LOG_FORMAT: json
+      DATA_COLLECTOR_DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/data_collector
+    ports:
+      - "8151:8151"
+    depends_on:
+      - db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8151/health', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:18-alpine
+    container_name: data-collector-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: data_collector
+    ports:
+      - "5451:5432"
+    volumes:
+      - data_collector_db_data:/var/lib/postgresql/data
+
+volumes:
+  data_collector_db_data:

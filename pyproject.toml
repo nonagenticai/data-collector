@@ -1,0 +1,102 @@
+[project]
+name = "data-collector"
+version = "0.1.0"
+description = "Receives and persists every inference interaction for later use in training data generation"
+requires-python = ">=3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "psycopg[binary,pool]>=3.3.0",
+    "alembic>=1.14.0",
+    "structlog>=24.4.0",
+    "opentelemetry-api>=1.45.1",
+    "opentelemetry-sdk>=1.29.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "httpx>=0.28.0",
+    "opentelemetry-instrumentation-httpx>=0.50b0",
+    "opentelemetry-exporter-otlp-proto-http>=1.29.0",
+    "orjson>=3.10.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=0.25.0",
+    "httpx>=0.28.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.15",
+    "ty>=0.0.23",
+    "pytest-timeout>=2.3.1",
+    "pip-audit>=2.10.0",
+    "bandit>=1.7.0",
+    # PYSEC-2026-3721: pip <26.2 vulnerable (transitive via pip-audit -> pip-api -> pip)
+    "pip>=26.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.ty.environment]
+python-version = "3.14"
+python = ".venv"
+extra-paths = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=src --cov-report=term-missing"
+timeout = 60
+markers = [
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+    "slow: marks tests as slow-running",
+    "e2e: marks tests as end-to-end tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+concurrency = ["greenlet", "thread"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["db", "models", "routers", "services", "settings", "logging_config", "telemetry"]
+
+[tool.coverage.report]
+# ⚠️ CORRECTED — this said "fail_under enforced explicitly in CI
+# (.github/workflows/ci-cd.yaml)". THREE things are wrong with that, and the
+# direction is the dangerous one: it reads as a guarantee that does not exist.
+#   1. There is no `fail_under` key in this file at all, here or anywhere.
+#   2. `.github/workflows/ci-cd.yaml` passes NO coverage input to the archetype;
+#      the run resolves `coverage_fail_under:` to empty and
+#      `integration_coverage: false`.
+#   3. The CI test step runs `pytest ... --no-cov` and both coverage steps report
+#      `skipped`, so no percentage is computed in CI, let alone compared.
+# Local `addopts` does carry `--cov`, but enforces no floor either. Nothing in
+# this repo gates on coverage today. Do not cite one until something does.
